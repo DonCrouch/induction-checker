@@ -33,49 +33,55 @@
   <div id="err" class="msg err"></div>
 </div>
 <script>
-const FLOW_URL = "https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk";
-const MODULES_URL = "https://mdgrp.sharepoint.com/sites/MenziesDistributionAgencyDriverInduction/SitePages/Induction-Modules.aspx?source=FromHomepage#section-1-introducing-menzies-distribution-solutions";
+document.getElementById('checkBtn').addEventListener('click', async () => {
+  const name = document.getElementById('name').value.trim();
+  const sabre = document.getElementById('sabre').value.trim();
+  const statusDiv = document.getElementById('status');
 
-const f = document.getElementById('f');
-const ok = document.getElementById('ok');
-const warn = document.getElementById('warn');
-const err = document.getElementById('err');
-const btn = document.getElementById('go');
+  if (!name || !sabre) {
+    statusDiv.innerHTML = `<div class="error">Please enter both your name and SABRE reference.</div>`;
+    return;
+  }
 
-function hideAll(){ ok.style.display=warn.style.display=err.style.display='none'; }
+  statusDiv.innerHTML = `<div class="loading">Checking status, please wait...</div>`;
 
-f.addEventListener('submit', async (e)=>{
-  e.preventDefault(); hideAll();
-  btn.disabled=true; btn.textContent='Checking…';
-
-  const fullName = document.getElementById('n').value;
-  const sabreRef  = document.getElementById('s').value;
-
-  try{
-    const r = await fetch(FLOW_URL, {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ fullName, sabreRef })
+  try {
+    const res = await fetch("https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fullName: name, sabreRef: sabre })
     });
-    if(!r.ok) throw new Error('HTTP '+r.status);
-    const data = await r.json();
 
-    if(data.result === 'valid'){
-      const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
-      ok.innerHTML = `✅ Your induction is valid.<br>Last induction date: ${d}. No further action required.`;
-      ok.style.display='block';
+    if (!res.ok) throw new Error(`Server responded ${res.status}`);
+    const data = await res.json();
+
+    if (data.result === "valid") {
+      statusDiv.innerHTML = `
+        <div class="success">
+          ✅ Induction already completed on <strong>${data.lastDate}</strong>.<br>
+          You don’t need to do it again.
+        </div>`;
     } else {
-      warn.innerHTML = `⚠️ Your induction needs updating.<br>
-        Please <a href="${MODULES_URL}" target="_top" rel="noopener">scroll down to the induction modules</a> and complete the videos + quiz.`;
-      warn.style.display='block';
+      statusDiv.innerHTML = `
+        <div class="warning">
+          ⚠️ No valid induction found.<br>
+          <a href="https://mdgrp.sharepoint.com/sites/MenziesDistributionAgencyDriverInduction/SitePages/Induction-Modules.aspx?source=FromHomepage#section-1-introducing-menzies-distribution-solutions" target="_blank">
+            Click here to start your induction
+          </a>
+        </div>`;
     }
-  } catch(e2){
-    err.textContent = 'Could not check status right now. Please try again later.';
-    err.style.display='block';
-  } finally {
-    btn.disabled=false; btn.textContent='Check status';
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerHTML = `
+      <div class="error">
+        ⚠️ Sorry, something went wrong.<br>
+        The system couldn’t connect to the induction database.<br>
+        Please try again in a few minutes.
+      </div>`;
   }
 });
 </script>
 </body>
 </html>
+
