@@ -1,80 +1,116 @@
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('INIT induction-checker');
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agency Induction Checker</title>
+  <style>
+    :root{--navy:#0b1440;--card:#fff;--ink:#0f172a}
+    body{margin:0;font-family:Segoe UI,system-ui,Arial,sans-serif;background:var(--navy);color:var(--ink)}
+    .wrap{max-width:760px;margin:48px auto;padding:0 16px}
+    .card{background:var(--card);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.15);padding:24px}
+    h1{color:#fff;text-align:center;margin:0 0 16px;font-weight:700}
+    label{display:block;margin:14px 0 6px;font-weight:600}
+    input{width:100%;padding:12px 14px;border:1px solid #d0d7de;border-radius:8px;box-sizing:border-box}
+    button{width:100%;margin-top:16px;padding:12px 16px;border:0;border-radius:8px;background:#082a5b;color:#fff;font-weight:700;cursor:pointer}
+    button[disabled]{opacity:.6;cursor:not-allowed}
+    .msg{display:none;margin-top:12px;padding:12px;border-radius:8px;border:1px solid}
+    .ok{background:#e8f5e9;border-color:#2e7d32;color:#1b5e20}
+    .warn{background:#fff8e1;border-color:#f9a825;color:#8d6e00}
+    .err{background:#ffebee;border-color:#c62828;color:#b71c1c}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Check Your Induction Status</h1>
+    <div class="card">
+      <form id="f" autocomplete="on" onsubmit="return false;">
+        <label for="n">First &amp; Last Name</label>
+        <input id="n" required placeholder="e.g. John Smith" />
+        <label for="s">Your Unique SABRE Reference</label>
+        <input id="s" required placeholder="e.g. SAB12345" />
+        <button id="go" type="button">Check status</button>
+      </form>
+      <div id="ok"   class="msg ok"></div>
+      <div id="warn" class="msg warn"></div>
+      <div id="err"  class="msg err"></div>
+    </div>
+  </div>
 
-  // === Power Automate HTTP trigger URL (full URL incl. ?api-version&sp&sv&sig) ===
-  const FLOW_URL = "https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk";
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('INIT induction-checker');
 
-  // --- Elements ---
-  const form   = document.getElementById('f');
-  const btn    = document.getElementById('go');
-  const nameEl = document.getElementById('n');
-  const sabreEl= document.getElementById('s');
-  const ok     = document.getElementById('ok');
-  const warn   = document.getElementById('warn');
-  const err    = document.getElementById('err');
+    const FLOW_URL = "https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk";
 
-  function show(el, html){ if(!el) return; el.innerHTML = html; el.style.display='block'; }
-  function hide(...els){ els.forEach(e => e && (e.style.display='none')); }
+    const form   = document.getElementById('f');
+    const btn    = document.getElementById('go');
+    const nameEl = document.getElementById('n');
+    const sabreEl= document.getElementById('s');
+    const ok     = document.getElementById('ok');
+    const warn   = document.getElementById('warn');
+    const err    = document.getElementById('err');
 
-  // Guard: if any key element missing, bail with message
-  if (!form || !btn || !nameEl || !sabreEl) {
-    console.error('Init error: missing element(s)', {form, btn, nameEl, sabreEl});
-    show(err, 'Setup error: missing form elements.');
-    return;
-  }
+    function show(el, html){ if(!el) return; el.innerHTML = html; el.style.display='block'; }
+    function hide(...els){ els.forEach(e => e && (e.style.display='none')); }
 
-  async function handleCheck(e){
-    if (e) e.preventDefault();
-    hide(ok, warn, err);
-
-    const fullName = (nameEl.value || '').trim();
-    const sabreRef = (sabreEl.value || '').trim();
-
-    console.log('CLICK', { fullName, sabreRef });
-
-    if (!fullName || !sabreRef){
-      show(err, '❌ Please enter both your name and SABRE reference.');
+    if (!form || !btn || !nameEl || !sabreEl) {
+      console.error('Init error: missing element(s)', {form, btn, nameEl, sabreEl});
+      show(err, 'Setup error: missing form elements.');
       return;
     }
 
-    btn.disabled = true; btn.textContent = 'Checking…';
+    async function handleCheck(e){
+      if (e) e.preventDefault();
+      hide(ok, warn, err);
 
-    try{
-      const r = await fetch(FLOW_URL, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify({ fullName, sabreRef })
-      });
+      const fullName = (nameEl.value || '').trim();
+      const sabreRef = (sabreEl.value || '').trim();
 
-      const raw = await r.text();
-      console.log('HTTP', r.status, raw);
+      console.log('CLICK', { fullName, sabreRef });
 
-      if (!r.ok) throw new Error(`HTTP ${r.status} ${raw}`);
-
-      // Expecting flow to return JSON like:
-      // { "result": "valid", "lastDate": "2025-10-06" }  OR  { "result": "needs" }
-      const data = JSON.parse(raw);
-
-      if (data.result === 'valid') {
-        const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
-        show(ok, `✅ Induction already completed on <b>${d}</b>.`);
-      } else if (data.result === 'needs') {
-        show(warn, '⚠️ No valid induction found. Please complete the modules below.');
-      } else {
-        show(err, 'Unexpected response from server.');
+      if (!fullName || !sabreRef){
+        show(err, '❌ Please enter both your name and SABRE reference.');
+        return;
       }
-    } catch(e2){
-      console.error(e2);
-      show(err, `⚠️ Connection error: ${String(e2)}`);
-    } finally {
-      btn.disabled = false; btn.textContent = 'Check status';
+
+      btn.disabled = true; btn.textContent = 'Checking…';
+
+      try{
+        const r = await fetch(FLOW_URL, {
+          method: 'POST',
+          headers: { 'Content-Type':'application/json' },
+          body: JSON.stringify({ fullName, sabreRef })
+        });
+
+        const raw = await r.text();
+        console.log('HTTP', r.status, raw);
+
+        if (!r.ok) throw new Error(`HTTP ${r.status} ${raw}`);
+
+        // Expected flow response:
+        // { "result": "valid", "lastDate": "2025-10-06" }  OR  { "result": "needs" }
+        const data = JSON.parse(raw);
+
+        if (data.result === 'valid') {
+          const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
+          show(ok, `✅ Induction already completed on <b>${d}</b>.`);
+        } else if (data.result === 'needs') {
+          show(warn, '⚠️ No valid induction found. Please complete the modules below.');
+        } else {
+          show(err, 'Unexpected response from server.');
+        }
+      } catch(e2){
+        console.error(e2);
+        show(err, `⚠️ Connection error: ${String(e2)}`);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Check status';
+      }
     }
-  }
 
-  // Wire up events
-  btn.addEventListener('click', handleCheck);
-  form.addEventListener('submit', handleCheck); // supports Enter key
-});
-</script>
-
+    btn.addEventListener('click', handleCheck);
+    form.addEventListener('submit', handleCheck); // Enter key support
+  });
+  </script>
+</body>
+</html>
