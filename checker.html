@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agency Induction Checker</title>
+<style>
+  body{font-family:Segoe UI,system-ui,Arial,sans-serif;margin:0;background:#f8f9fa}
+  .wrap{max-width:680px;margin:32px auto;padding:24px;background:#fff;border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,0.1)}
+  h2{text-align:center;color:#00205B}
+  label{display:block;margin:12px 0 6px;font-weight:600}
+  input,button{width:100%;padding:12px;font-size:16px;border-radius:4px}
+  input{border:1px solid #ccc}
+  button{cursor:pointer;border:0;background:#00205B;color:#fff;margin-top:12px}
+  button:hover{background:#0033a0}
+  .msg{margin-top:16px;padding:12px;border-radius:6px;display:none}
+  .ok{background:#e8f5e9;border:1px solid #2e7d32;color:#1b5e20}
+  .warn{background:#fff8e1;border:1px solid #f9a825;color:#8d6e00}
+  .err{background:#ffebee;border:1px solid #c62828;color:#b71c1c}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h2>Check Your Induction Status</h2>
+  <form id="f" autocomplete="on">
+    <label for="n">First &amp; Last Name</label>
+    <input id="n" required placeholder="e.g. John Smith">
+    <label for="s">Your Unique SABRE Reference</label>
+    <input id="s" required placeholder="e.g. SAB12345">
+    <button id="go" type="submit">Check status</button>
+  </form>
+  <div id="ok" class="msg ok"></div>
+  <div id="warn" class="msg warn"></div>
+  <div id="err" class="msg err"></div>
+</div>
+<script>
+const FLOW_URL = "https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk";
+const MODULES_URL = "https://mdgrp.sharepoint.com/sites/MenziesDistributionAgencyDriverInduction/SitePages/Induction-Modules.aspx?source=FromHomepage#section-1-introducing-menzies-distribution-solutions";
+
+const f = document.getElementById('f');
+const ok = document.getElementById('ok');
+const warn = document.getElementById('warn');
+const err = document.getElementById('err');
+const btn = document.getElementById('go');
+
+function hideAll(){ ok.style.display=warn.style.display=err.style.display='none'; }
+
+f.addEventListener('submit', async (e)=>{
+  e.preventDefault(); hideAll();
+  btn.disabled=true; btn.textContent='Checking…';
+
+  const fullName = document.getElementById('n').value;
+  const sabreRef  = document.getElementById('s').value;
+
+  try{
+    const r = await fetch(FLOW_URL, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ fullName, sabreRef })
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const data = await r.json();
+
+    if(data.result === 'valid'){
+      const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
+      ok.innerHTML = `✅ Your induction is valid.<br>Last induction date: ${d}. No further action required.`;
+      ok.style.display='block';
+    } else {
+      warn.innerHTML = `⚠️ Your induction needs updating.<br>
+        Please <a href="${MODULES_URL}" target="_top" rel="noopener">scroll down to the induction modules</a> and complete the videos + quiz.`;
+      warn.style.display='block';
+    }
+  } catch(e2){
+    err.textContent = 'Could not check status right now. Please try again later.';
+    err.style.display='block';
+  } finally {
+    btn.disabled=false; btn.textContent='Check status';
+  }
+});
+</script>
+</body>
+</html>
