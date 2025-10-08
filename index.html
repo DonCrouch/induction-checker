@@ -1,72 +1,65 @@
 <script>
-const FLOW_URL = "https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk";
+document.addEventListener('DOMContentLoaded', () => {
+  const FLOW_URL = "https://defaultaf757c3f7ec14f43954fa0b9a650bd.ff.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3252a70df28245448294ec944ed25586/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=k4Jv77s-gPqxuDNaNqhThejSvFznEGY2WQYVUIorLRk";
 
-function show(el, html) {
-  el.innerHTML = html;
-  el.style.display = 'block';
-}
-function hide(...els) {
-  els.forEach(e => e && (e.style.display = 'none'));
-}
-
-document.getElementById('go').addEventListener('click', async (event) => {
-  event.preventDefault(); // stop form reload
-  hide(
-    document.getElementById('ok'),
-    document.getElementById('warn'),
-    document.getElementById('err')
-  );
-
-  const fullName = (document.getElementById('n')?.value || '').trim();
-  const sabreRef = (document.getElementById('s')?.value || '').trim();
-  const btn = document.getElementById('go');
-  const ok = document.getElementById('ok');
+  const btn  = document.getElementById('go');
+  const nameEl  = document.getElementById('n');
+  const sabreEl = document.getElementById('s');
+  const ok   = document.getElementById('ok');
   const warn = document.getElementById('warn');
-  const err = document.getElementById('err');
+  const err  = document.getElementById('err');
 
-  console.log('CLICK', { fullName, sabreRef }); // Debug in console
+  function show(el, html){ el.innerHTML = html; el.style.display='block'; }
+  function hide(...els){ els.forEach(e => e && (e.style.display='none')); }
 
-  if (!fullName || !sabreRef) {
-    show(err, '❌ Please enter both your name and SABRE reference.');
+  if (!btn || !nameEl || !sabreEl) {
+    console.error('Init error: missing element(s)', {btn, nameEl, sabreEl});
+    if (err) { show(err, 'Setup error: missing form elements.'); }
     return;
   }
 
-  btn.disabled = true;
-  btn.textContent = 'Checking…';
+  btn.addEventListener('click', async (event) => {
+    event.preventDefault();               // prevent form submit / reload
+    hide(ok, warn, err);
 
-  try {
-    const r = await fetch(FLOW_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName, sabreRef })
-    });
+    const fullName = (nameEl.value || '').trim();
+    const sabreRef = (sabreEl.value || '').trim();
 
-    const raw = await r.text();
-    console.log('HTTP', r.status, raw);
+    console.log('CLICK', { fullName, sabreRef });
 
-    if (!r.ok) throw new Error(`HTTP ${r.status} ${raw}`);
-
-    const data = JSON.parse(raw);
-
-    if (data.result === 'valid') {
-      const d = data.lastDate
-        ? new Date(data.lastDate).toLocaleDateString('en-GB')
-        : '—';
-      show(ok, `✅ Induction already completed on <b>${d}</b>.`);
-    } else {
-      show(warn, '⚠️ No valid induction found. Please complete the modules below.');
+    if (!fullName || !sabreRef) {
+      show(err, '❌ Please enter both your name and SABRE reference.');
+      return;
     }
-  } catch (e) {
-    console.error(e);
-    show(err, `⚠️ Connection error: ${String(e)}`);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Check status';
-  }
+
+    btn.disabled = true; btn.textContent = 'Checking…';
+
+    try {
+      const r = await fetch(FLOW_URL, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ fullName, sabreRef })
+      });
+
+      const raw = await r.text();
+      console.log('HTTP', r.status, raw);
+
+      if (!r.ok) throw new Error(`HTTP ${r.status} ${raw}`);
+
+      const data = JSON.parse(raw); // expects {result:'valid'|'needs', lastDate?:'yyyy-MM-dd'}
+
+      if (data.result === 'valid') {
+        const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
+        show(ok, `✅ Induction already completed on <b>${d}</b>.`);
+      } else {
+        show(warn, '⚠️ No valid induction found. Please complete the modules below.');
+      }
+    } catch (e) {
+      console.error(e);
+      show(err, `⚠️ Connection error: ${String(e)}`);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Check status';
+    }
+  });
 });
 </script>
-
-
-
-
-
