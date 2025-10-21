@@ -96,10 +96,8 @@
           const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
           show(ok, `✅ Induction already completed on <b>${d}</b>.`);
 } else if (data.result === 'needs') {
-  show(
-    warn,
-    '⚠️ No valid induction found. Please <a href="#" id="redirectLink" target="_blank" style="color:#082a5b;font-weight:700;text-decoration:underline;">CLICK HERE</a> to be redirected to our Agency Induction Page.'
-  );
+  const link = '<a href="#" target="_blank" style="color:#082a5b;font-weight:700;text-decoration:underline;">CLICK HERE</a>';
+  show(warn, `⚠️ No valid induction found. Please ${link} to be redirected to our Agency Induction Page.`);
 }
         } else {
           show(err, 'Unexpected response from server.');
@@ -118,6 +116,7 @@
   </script>
 </body>
 </html>
+
 
 
 
