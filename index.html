@@ -74,7 +74,8 @@
         return;
       }
 
-      btn.disabled = true; btn.textContent = 'Checking…';
+      btn.disabled = true; 
+      btn.textContent = 'Checking…';
 
       try{
         const r = await fetch(FLOW_URL, {
@@ -88,26 +89,25 @@
 
         if (!r.ok) throw new Error(`HTTP ${r.status} ${raw}`);
 
-        // Expected flow response:
-        // { "result": "valid", "lastDate": "2025-10-06" }  OR  { "result": "needs" }
         const data = JSON.parse(raw);
 
         if (data.result === 'valid') {
           const d = data.lastDate ? new Date(data.lastDate).toLocaleDateString('en-GB') : '—';
           show(ok, `✅ Induction already completed on <b>${d}</b>.`);
-
-} else if (data.result === 'needs') {
-  show(warn, '⚠️ No valid induction found. Please scroll down to complete your agency driver induction.');
-}
-
-        } else {
+        } 
+        else if (data.result === 'needs') {
+          show(warn, '⚠️ No valid induction found. Please scroll down to complete your agency driver induction.');
+        } 
+        else {
           show(err, 'Unexpected response from server.');
         }
+
       } catch(e2){
         console.error(e2);
         show(err, `⚠️ Connection error: ${String(e2)}`);
       } finally {
-        btn.disabled = false; btn.textContent = 'Check status';
+        btn.disabled = false; 
+        btn.textContent = 'Check status';
       }
     }
 
@@ -117,10 +117,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
